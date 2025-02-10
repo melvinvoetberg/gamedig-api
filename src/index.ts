@@ -2,14 +2,13 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { apiReference } from '@scalar/hono-api-reference'
+import { basicAuth } from 'hono/basic-auth'
 import query from './routes/query.js'
 import type { OpenAPIV3 } from 'openapi-types'
 
-// Create a typed Hono app
-const app = new Hono<{
-  Variables: {};
-  Bindings: {};
-}>()
+// Environment variables
+const username = process.env.AUTH_USERNAME;
+const password = process.env.AUTH_PASSWORD;
 
 // OpenAPI specification
 const openApiSpec: OpenAPIV3.Document = {
@@ -19,6 +18,16 @@ const openApiSpec: OpenAPIV3.Document = {
     version: '1.0.0',
     description: 'A RESTful API wrapper for the GameDig game server query library.',
   },
+  components: username && password ? {
+    securitySchemes: {
+      basicAuth: {
+        type: 'http',
+        scheme: 'basic',
+        description: 'Basic authentication using username and password',
+      },
+    },
+  } : undefined,
+  security: username && password ? [{ basicAuth: [] }] : [],
   paths: {
     '/api/query': {
       post: {
@@ -122,6 +131,22 @@ const openApiSpec: OpenAPIV3.Document = {
               },
             },
           },
+          '401': {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: {
+                      type: 'string',
+                      example: 'Unauthorized',
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -152,8 +177,25 @@ const openApiSpec: OpenAPIV3.Document = {
   },
 }
 
+// Create Hono app
+const app = new Hono();
+
 // Enable CORS
 app.use('/*', cors())
+
+// Health check endpoint (unprotected)
+app.get('/health', (c) => c.json({ status: 'ok' }))
+
+// Add basic auth if credentials are set
+if (username && password) {
+  app.use('/*', async (c, next) => {
+    if (c.req.path === '/health') return next();
+    return basicAuth({
+      username,
+      password,
+    })(c, next);
+  });
+}
 
 // Mount API routes
 app.route('/api/query', query)
@@ -169,14 +211,12 @@ app.get('/docs', apiReference({
   },
 }))
 
-// Health check endpoint
-app.get('/health', (c) => c.json({ status: 'ok' }))
-
 // Start the server
 const port = process.env.PORT || 3000
 console.log(`Server is running on port ${port}`)
 
 serve({
   fetch: app.fetch,
+  hostname: '0.0.0.0',
   port: Number(port)
 })
