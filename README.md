@@ -7,6 +7,7 @@ A RESTful API wrapper for the GameDig game server query library. This API allows
 - Query game servers for various games (Minecraft, CS2, etc.)
 - RESTful API with JSON responses
 - Built-in API documentation using Scalar
+- Basic authentication support
 - CORS enabled
 - TypeScript support
 
@@ -15,6 +16,16 @@ A RESTful API wrapper for the GameDig game server query library. This API allows
 ```bash
 npm install
 ```
+
+## Configuration
+
+### Authentication
+The API can be protected with basic authentication by setting these environment variables:
+```bash
+AUTH_USERNAME=your_username
+AUTH_PASSWORD=your_password
+```
+When set, all endpoints except `/health` will require basic authentication.
 
 ## Running the Server
 
@@ -32,13 +43,27 @@ npm run dev
 #### Example 1: Minecraft Server
 
 Request:
-```json
-{
-  "type": "minecraft",
-  "host": "mc.example.com",
-  "port": 25565,
-  "maxAttempts": 1
-}
+```bash
+# Without auth
+curl -X POST http://localhost:3000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "minecraft",
+    "host": "mc.example.com",
+    "port": 25565,
+    "maxRetries": 1
+  }'
+
+# With auth
+curl -X POST http://localhost:3000/api/query \
+  -u "username:password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "minecraft",
+    "host": "mc.example.com",
+    "port": 25565,
+    "maxRetries": 1
+  }'
 ```
 
 Response:
@@ -61,13 +86,16 @@ Response:
 #### Example 2: Counter-Strike 2 Server
 
 Request:
-```json
-{
-  "type": "cs2",
-  "host": "cs.example.com",
-  "port": 27015,
-  "maxAttempts": 1
-}
+```bash
+curl -X POST http://localhost:3000/api/query \
+  -u "username:password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "cs2",
+    "host": "cs.example.com",
+    "port": 27015,
+    "maxRetries": 1
+  }'
 ```
 
 Response:
