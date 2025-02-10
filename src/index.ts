@@ -53,10 +53,10 @@ const openApiSpec: OpenAPIV3.Document = {
                     type: 'number',
                     description: 'The port number of the game server (if different from default)',
                   },
-                  maxAttempts: {
+                  maxRetries: {
                     type: 'number',
                     default: 1,
-                    description: 'Maximum number of query attempts',
+                    description: 'Maximum number of query retries',
                   },
                 },
               },
